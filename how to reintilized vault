@@ -1,0 +1,7 @@
+105  apt remove vault
+  106  rm -rf /opt/vault
+  107  apt install vault
+  108  export VAULT_ADDR=http://127.0.0.1:8200
+  109  vault status
+  110  vault operator init
+  111  vault status

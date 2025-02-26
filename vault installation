@@ -1,0 +1,39 @@
+sudo -i
+root@ip-172-31-6-230:~# history
+    1  apt-get update -y
+    2  vi /etc/cloud/cloud.cfg
+    3  vi /etc/ssh/sshd_config
+    4  sudo service sshd restart
+    5  sudo passwd ubuntu
+    6  usermod -aG ubuntu sudo
+    7  visudo
+    8  shutdown -h now
+    9  apt-get update
+    9.1 apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+   10  curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+   11  apt update
+   12  apt install vault -y
+   13  systemctl status vault
+   14  systemctl start vault
+   15  systemctl status vault
+   16  export VAULT_ADDR=http://127.0.0.1:8200
+   17  vault status
+###how to enable vault in http mode
+nano /etc/vault.d/vault.hcl
+###to save it press ctrl x then press ctrl y and enter
+   11  systemctl restart vault
+   12  systemctl status vault
+   ###hvault accessable using any ip
+   # HTTP listener
+listener "tcp" {
+  address = "0.0.0.0:8200"
+  tls_disable = 1
+}
+###then press ctrl x after that press y and enter
+systemctl restart vault
+###how to unseal a vault
+vault operator init
+###oince you got all the key store it somewhere
+vault status
+##it will show you vault is locked 
+

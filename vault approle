@@ -1,0 +1,31 @@
+127  export VAULT_ADDR=http://127.0.0.1:8200
+  128  vault status
+  129  vault login hvs.PQNpZj1fhyH4VvTppasRMfYx
+  130  vault auth
+  131  vault auth list
+  133  vault auth enable approle
+  134  vault auth list
+  135  vault write auth/approle/role/jenkins-role token_num_uses=0 secret_id_num_uses=0 policies="jenkins"
+  137  vault read auth/approle/role/jenkins-role
+  138  vault read auth/approle/role/jenkins-role/role-id
+  139  vault write -f auth/approle/role/jenkins-role/secret-id
+  #####we will enable the secret engine and write down the secret
+   141  vault secrets enable -path=secrets kv
+st
+  143  vault secrets list
+  144  vault write secrets/creds/vagrant username=vagrant password=vagrant
+####now we need to create a policy and attach the policy with secret engine
+ nano jenkins-policy.hcl
+####inside jenkins.hcl
+path "secrets/creds/vagrant" {
+capabilities = ["read"]
+}
+#####finally we need to write down the policy
+149  vault policy write jenkins jenkins-policy.hcl
+  150  vault policy list
+  153  vault policy read jenkins
+  ###add the vagrant user in node machine
+    9  adduser vagrant
+   10  visudo
+   ###press Ctrl X y and enter
+   systemctl restart sshd

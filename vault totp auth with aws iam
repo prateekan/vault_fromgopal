@@ -1,0 +1,7 @@
+ 579  vault secrets enable totp
+   581  vault secrets list
+   ###aws secret to be integrated with vault
+    vault write totp/keys/totp-gopal url="otpauth://totp/Amazon%20Web%20Services:totp@355496310271?secret=HVIRPOGYA3FBUERX4BOHLEO4336JEHKLD7F34IQ5YNL6K6XTWRN4GXZGSLXC2RFF"
+    vault read totp/code/totp-gopal
+
+

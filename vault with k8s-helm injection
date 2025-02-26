@@ -1,0 +1,88 @@
+#####install the helm chart
+340  wget https://get.helm.sh/helm-v3.10.0-linux-amd64.tar.gz
+  341  tar zxvf helm-v3.10.0-linux-amd64.tar.gz
+  342  ls
+  343  cd linux-amd64/
+  344  ls
+  345  mv helm /usr/bin/
+  346  helm
+  347  cd /root
+  348  history
+  349  helm repo add hashicorp https://helm.releases.hashicorp.com
+  350  helm repo update
+  351  helm install vault hashicorp/vault --set "injector.externalVaultAddr=http://3.236.175.226:8200"
+  352  helm status vault
+  353  helm get manifest vault
+  354  kubectl get pod
+  355  kubectl describe serviceaccount vault
+  356  kubectl get pod
+  357  helm get manifest vault
+  
+  ####if you have kubernetes 1.24 + only version it will display the token. the latest version of kubernetes is 1.26 which do not generate any token by default. 
+  ##3using the kubernetes secret api you need to generate the token. 
+  nano vault-secret.yml
+  #####inside vaultsecret.yml file add this below which will generate the token
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vault-token-g955r
+  annotations:
+    kubernetes.io/service-account.name: vault
+type: kubernetes.io/service-account-token
+##apply the above file in kubernetes
+kubectl apply -f vault-secret.yml
+###we need to store the token as environment varaible
+ 361  VAULT_HELM_SECRET_NAME=$(kubectl get secrets --output=json | jq -r '.items[].metadata | select(.name|startswith("vault-token-")).name')
+ 355  kubectl describe serviceaccount vault
+ ###to see the token
+ 362  kubectl describe secret $VAULT_HELM_SECRET_NAME
+ #retrive the json web token
+ TOKEN_REVIEW_JWT=$(kubectl get secret $VAULT_HELM_SECRET_NAME --output='go-template={{ .data.token }}' | base64 --decode)
+####retrive the kubernetes ca certificate
+ KUBE_CA_CERT=$(kubectl config view --raw --minify --flatten --output='jsonpath={.clusters[].cluster.certificate-authority-data}' | base64 --decode)
+###retrive the kubernetes host url
+KUBE_HOST=$(kubectl config view --raw --minify --flatten --output='jsonpath={.clusters[].cluster.server}')
+###configure the kubernetes authetication method to use the service account token
+###enable kube engine in vault
+370  vault auth enable kubernetes
+#######
+vault write auth/kubernetes/config      token_reviewer_jwt="$TOKEN_REVIEW_JWT"      kubernetes_host="$KUBE_HOST"      kubernetes_ca_cert="$KUBE_CA_CERT"      issuer="https://kubernetes.default.svc.cluster.local"
+#####write out the polud named as devwebapp which will enable read capabilities for secret at path
+vault policy write devwebapp - <<EOF
+path "secret/data/devwebapp/config" {
+  capabilities = ["read"]
+}
+EOF
+
+
+####create an kubernetes authetication role devwebapp
+ vault write auth/kubernetes/role/devweb-app      bound_service_account_names=internal-app      bound_service_account_namespaces=default      policies=devwebapp      ttl=24h
+###we need to inject secret in the webapp
+nano poddevwebap.yml
+####inside the yaml file enter this value
+apiVersion: v1
+kind: Pod
+metadata:
+  name: devwebapp-with-annotations
+  labels:
+    app: devwebapp-with-annotations
+  annotations:
+    vault.hashicorp.com/agent-inject: 'true'
+    vault.hashicorp.com/role: 'devweb-app'
+    vault.hashicorp.com/agent-inject-secret-credentials.txt: 'secret/data/devwebapp/config'
+spec:
+  serviceAccountName: internal-app
+  containers:
+    - name: app
+      image: burtlo/devwebapp-ruby:k8s
+###apply the file 
+378  kubectl apply -f poddevwebap.yml
+  379  kubectl get pod
+  ####verify the key
+   387  kubectl describe secret $VAULT_HELM_SECRET_NAME
+    384  kubectl get pod
+  385  kubectl describe pod devwebapp-with-annotations
+
+
+
+

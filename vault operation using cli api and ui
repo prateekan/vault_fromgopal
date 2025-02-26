@@ -1,0 +1,31 @@
+####auth method
+418  vault auth enable userpass
+  419  vault auth list
+  421  vault auth enable -path=vault-course userpass
+  422  vault auth list
+  423  vault auth disable userpass
+  424  vault auth list
+  425  vault auth disable vault-course
+  426  vault auth list
+###how to add an auth method and modify the same
+  435  vault auth enable -path=gopal -description="local credentails for vault" userpass
+ 439  vault auth tune -default-lease-ttl=24h gopal/
+ ####how to tune an vault auth method
+ 441  vault write auth/gopal/users/john password=vault policies=gopal
+  442  vault list auth/gopal/users
+  443  vault read auth/gopal/users/john
+###how to enable auth role with token and policies
+445  vault auth enable approle
+  446  vault write auth/approle/role/gopal token_ttl=20m policies=gopal
+########configure auth method using api call
+nano auth.json
+###inside auth.json file
+{
+ "type": "approle"
+}
+####
+453  curl --header "X-Vault-Token: hvs.PQNpZj1fhyH4VvTppasRMfYx" --request POST --data @auth.json http://127.0.0.1:8200/v1/sys/auth/approle
+
+###3once you created the user you can login withthe user
+vault login -method=userpass username=bob
+

@@ -1,0 +1,53 @@
+###to do the same we will enable vault kv secret engine 2
+ 466  vault secret enable kv-v2
+471  vault kv enable-versioning secrets/
+ 472  vault secrets list -detailed
+ ###3we will create three policy one for entity other two are for alias
+ 475  nano base.hcl
+#####
+path "secret/data/training_*" {
+capabilities = ["create","read"]
+}
+#####
+477  nano test.hcl
+#######
+path "secret/data/test" {
+capabilities = ["create","read","update","delete"]
+}
+
+######
+ 479  nano team-qa.hcl
+ #####
+ path "secret/data/team-qa" {
+capabilities = ["create","read","update","delete"]
+}
+#####we need to apply all this policy to vault
+ 482  vault policy write base base.hcl
+
+  484  vault policy write test test.hcl
+  485  vault policy write team-qa team-qa.hcl
+  486  vault policy list
+###we will enable userpass auth method on a userpass-test
+ 492  vault auth enable -path="userpass-test" userpass
+ 492.1 vault auth enable -path="userpass-qa" userpass
+
+  493  vault auth list
+####create a new user bob in userpass-test where the password is training and test policy is attached
+ 496  vault write auth/userpass-test/users/bob password="training" policies="test"
+####we will store the accessor vault for userpass-test in a file called as accessor_test.txt
+ 499  vault auth list -detailed
+  500  vault auth list -format=json | jq -r '.["userpass-test/"].accessor' > accessor_text.txt
+  501  cat accessor_text.txt
+  502  vault auth list -format=json | jq -r '.["userpass-qa/"].accessor' > accessor_qa.txt
+  503  cat accessor_qa.txt
+  ###3create the entity and store the entity id 
+   513  vault write -format=json identity/entity name="bob-smith" policies="base"      metadata=organization="ACME Inc."      metadata=team="QA"      | jq -r ".data.id" > entity_id.txt
+ 520  nano entity_id.txt
+##3copy the entity id from the ui and save it in above file
+  ##3we will map entity with alias
+522  vault write identity/entity-alias name="bob" canonical_id=$(cat entity_id.txt) mount_accessor=$(cat accessor_text.txt) custom_metadata=account="Tester Account"
+  523  vault read identity/entity-alias/id/707bfaa3-04ff-a939-59e3-b09d9cbc9d2f
+  524  vault write identity/entity-alias name="bsmith" canonical_id=$(cat entity_id.txt) mount_accessor=$(cat accessor_qa.txt) custom_metadata=account="Tester Account"
+  525  vault read -format=json identity/entity/id/$(cat entity_id.txt) | jq -r ".data"
+  ###verify the entity and alias join
+   527  vault read -format=json identity/entity/id/$(cat entity_id.txt) | jq -r ".data"
